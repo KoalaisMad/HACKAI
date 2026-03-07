@@ -8,7 +8,8 @@ A real-time risk assessment and event monitoring dashboard for maritime activiti
 - **Event Feed** – Chronological list of recent events with severity tags (High/Med) and activity chart
 - **Risk & Oil Price Trend** – Dual-line chart showing risk and oil price over time with event markers
 - **Shipping Status** – Key metrics (tankers in region, avg speed, reroutes) with mini map
-- **Crisis Briefing** – Event summary, risk score, predicted impact, top factors, and audio briefing button
+- **Crisis Briefing** – Event summary, risk score, predicted impact, top factors, and audio briefing button (positioned above the Event Feed)
+- **StraitWatch Assistant** – In-app chatbot powered by Google Gemini for questions about risk, events, and shipping
 
 ## Getting Started
 

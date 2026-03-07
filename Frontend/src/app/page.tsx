@@ -4,6 +4,7 @@ import EventFeed from "@/components/EventFeed";
 import RiskOilPriceChart from "@/components/RiskOilPriceChart";
 import ShippingStatus from "@/components/ShippingStatus";
 import CrisisBriefing from "@/components/CrisisBriefing";
+import ChatBot from "@/components/ChatBot";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function Home() {
@@ -19,8 +20,9 @@ export default function Home() {
             <GlobalRiskMap />
           </div>
 
-          {/* Event Feed */}
-          <div>
+          {/* Right column: Crisis Briefing first, then Event Feed */}
+          <div className="flex flex-col gap-6">
+            <CrisisBriefing />
             <EventFeed />
           </div>
         </div>
@@ -29,8 +31,9 @@ export default function Home() {
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
           <RiskOilPriceChart />
           <ShippingStatus />
-          <CrisisBriefing />
         </div>
+
+        <ChatBot />
       </main>
     </div>
     </ProtectedRoute>
