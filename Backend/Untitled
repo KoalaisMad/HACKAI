@@ -1,0 +1,15 @@
+# Server port (default 8000)
+PORT=8000
+
+# JWT secret for auth tokens (use a strong random string in production)
+JWT_SECRET=your-secret-key-change-in-production
+
+# Google Gemini API key for the in-app chatbot (get one at https://aistudio.google.com/apikey).
+# Optional; the chat shows an error if unset.
+GEMINI_API_KEY=AIzaSyDCyjQ14UGE9d3hZ1FLHsimUFG_q8v_VN4
+
+# ElevenLabs API key for voice responses in the in-app chatbot.
+ELEVENLABS_API_KEY=sk_e8d65aedd052df024faec6991509be7cb91a85f2d2af00ff
+
+# Default ElevenLabs voice ID to use for chat responses.
+ELEVENLABS_VOICE_ID=339a089cb008b853cdce88d927e0e544471fbd05e462452f2d1f26c26e9e5838

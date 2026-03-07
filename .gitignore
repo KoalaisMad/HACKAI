@@ -33,3 +33,6 @@ Thumbs.db
 
 # Misc
 *.pem
+
+# Backend user data (local dev)
+Backend/data/

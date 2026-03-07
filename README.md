@@ -13,7 +13,7 @@ A real-time risk assessment and event monitoring dashboard for maritime activiti
 
 ## Getting Started
 
-All app code lives in the `Frontend` folder. From the repo root:
+**Frontend (required):** From the repo root:
 
 ```bash
 cd Frontend
@@ -22,6 +22,18 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+**Backend (optional, for auth, dashboard data, and StraitWatch Assistant chat + voice):**
+
+```bash
+cd Backend
+cp .env.example .env
+# Edit .env: set GEMINI_API_KEY (chat), ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID (voice)
+npm install
+npm run dev
+```
+
+Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `Frontend/.env.local` to use the backend. The StraitWatch Assistant (Gemini chat + ElevenLabs voice) only works when the backend is running and these keys are configured.
 
 ## Tech Stack
 
@@ -51,8 +63,12 @@ Expected backend paths (relative to base URL):
 | GET | `/api/shipping/status` | Shipping metrics |
 | GET | `/api/charts/risk-oil` | Risk & oil price trend |
 | GET | `/api/map/data` | Map alerts and ships |
+| POST | `/api/chat` | Chat (Gemini); body: `messages` array of `{ role, content }` |
+| POST | `/api/tts` | Text-to-speech for chatbot (body: `text`, optional `voiceId`) |
 
 Request/response types are in `Frontend/src/lib/api-types.ts`. The client is in `Frontend/src/lib/api.ts` (and re-exported from `@/lib`).
+
+**StraitWatch Assistant (chat + voice):** When `NEXT_PUBLIC_API_URL` is set, the chatbot uses the backend for both Gemini (chat) and ElevenLabs (TTS). Set `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, and `ELEVENLABS_VOICE_ID` in the backend `.env` (see `Backend/.env.example`).
 
 ## Project Structure
 
