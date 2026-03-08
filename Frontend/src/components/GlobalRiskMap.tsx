@@ -1,9 +1,8 @@
 "use client";
 
-import { Globe, Flame, CloudLightning, Bell } from "lucide-react";
+import { Globe } from "lucide-react";
 import dynamic from "next/dynamic";
 
-// Dynamic import to avoid SSR issues with Leaflet
 const MapComponent = dynamic(
   () => import("./MapView").then((mod) => mod.MapView),
   {
@@ -16,16 +15,28 @@ const MapComponent = dynamic(
   }
 );
 
-export default function GlobalRiskMap() {
+type GlobalRiskMapProps = {
+  selectedRegion: string;
+};
+
+export default function GlobalRiskMap({
+  selectedRegion,
+}: GlobalRiskMapProps) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-      <div className="mb-4 flex items-center gap-2">
-        <Globe className="h-5 w-5 text-[var(--accent-blue)]" />
-        <h2 className="text-lg font-semibold text-white">Global Risk Map</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Globe className="h-5 w-5 text-[var(--accent-blue)]" />
+          <h2 className="text-lg font-semibold text-white">Global Risk Map</h2>
+        </div>
+
+        <span className="text-sm text-[var(--foreground)]/60">
+          {selectedRegion}
+        </span>
       </div>
 
       <div className="relative aspect-[4/3] min-h-[300px] overflow-hidden rounded-lg bg-[#0d1117]">
-        <MapComponent />
+        <MapComponent selectedRegion={selectedRegion} />
       </div>
     </div>
   );
