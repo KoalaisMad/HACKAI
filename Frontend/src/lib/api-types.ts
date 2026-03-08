@@ -108,11 +108,23 @@ export interface MapShip {
   type: "tanker" | "cargo";
 }
 
+export interface MapMarker {
+  position: [number, number];
+  label: string;
+  type: "conflict" | "weather" | "shipping";
+  date?: string;
+  severity?: "low" | "medium" | "high";
+  description?: string;
+  riskScore?: number;
+  predictedOilMove?: number;
+}
+
 export interface MapDataResponse {
-  center: [number, number];
-  zoom: number;
-  alerts: MapAlert[];
-  ships: MapShip[];
+  center?: [number, number];
+  zoom?: number;
+  alerts?: MapAlert[];
+  ships?: MapShip[];
+  markers?: MapMarker[];
 }
 
 // —— Generic API error ——
