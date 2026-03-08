@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Play } from "lucide-react";
+import { useState, useEffect } from "react";
 import { crisisApi, isBackendConfigured } from "@/lib/api";
 import type { CrisisBriefingResponse } from "@/lib/api-types";
+import type { RiskOilDataPoint } from "@/lib/realTimeOilData";
+import { type HistoricalEvent, calculateCurrentImpact } from "@/lib/historicalEvents";
+
+type CrisisBriefingProps = {
+  selectedDataPoint?: RiskOilDataPoint | null;
+  selectedHistoricalEvent?: HistoricalEvent | null;
+};
 
 const defaultBriefing: CrisisBriefingResponse = {
   event: "Tanker Security Incident",
@@ -19,61 +25,114 @@ const defaultBriefing: CrisisBriefingResponse = {
   ],
 };
 
-export default function CrisisBriefing() {
+function generateBriefingFromDataPoint(dataPoint: RiskOilDataPoint): CrisisBriefingResponse {
+  const riskScore = dataPoint.risk;
+  const oilPriceChange = dataPoint.oilPrice > 75 ? "+" + ((dataPoint.oilPrice - 75) / 75 * 100).toFixed(1) + "%" : "-" + ((75 - dataPoint.oilPrice) / 75 * 100).toFixed(1) + "%";
+  
+  let event = "Market Conditions";
+  let supplyChainDisruption = "Low";
+  let topFactors = ["Normal Trading Activity", "Stable Supply Routes", "Regular Market Conditions"];
+  
+  if (riskScore > 70) {
+    event = "High Risk Alert";
+    supplyChainDisruption = "High";
+    topFactors = ["Critical Chokepoint Activity", "Security Concerns", "Supply Route Disruption"];
+  } else if (riskScore > 50) {
+    event = "Elevated Risk Situation";
+    supplyChainDisruption = "Moderate";
+    topFactors = ["Increased Maritime Activity", "Regional Tensions", "Weather Conditions"];
+  } else if (riskScore > 30) {
+    event = "Moderate Risk Level";
+    supplyChainDisruption = "Low-Moderate";
+    topFactors = ["Minor Shipping Delays", "Weather Advisory", "Routine Operations"];
+  }
+  
+  return {
+    event: `${event} - ${dataPoint.time}`,
+    riskScore,
+    predictedImpact: {
+      oilPriceChange,
+      supplyChainDisruption,
+    },
+    topFactors,
+  };
+}
+
+function generateBriefingFromHistoricalEvent(historicalEvent: HistoricalEvent): CrisisBriefingResponse {
+  const currentImpact = calculateCurrentImpact(historicalEvent);
+  
+  return {
+    event: historicalEvent.title,
+    riskScore: currentImpact.currentRiskScore,
+    predictedImpact: {
+      oilPriceChange: `+${currentImpact.currentOilPriceChange}%`,
+      supplyChainDisruption: historicalEvent.supplyChainDisruption,
+    },
+    topFactors: currentImpact.adjustmentFactors,
+  };
+}
+
+export default function CrisisBriefing({ selectedDataPoint, selectedHistoricalEvent }: CrisisBriefingProps) {
   const [briefing, setBriefing] = useState(defaultBriefing);
-  const [audioLoading, setAudioLoading] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isHistoricalMode, setIsHistoricalMode] = useState(false);
+  const [historicalYear, setHistoricalYear] = useState<number | null>(null);
 
   useEffect(() => {
+    if (selectedHistoricalEvent) {
+      // Generate briefing from historical event with current economy adjustments
+      console.log('CrisisBriefing received historical event:', selectedHistoricalEvent);
+      const generatedBriefing = generateBriefingFromHistoricalEvent(selectedHistoricalEvent);
+      console.log('Generated briefing from historical event:', generatedBriefing);
+      setBriefing(generatedBriefing);
+      setIsHistoricalMode(true);
+      setHistoricalYear(selectedHistoricalEvent.year);
+      return;
+    }
+    
+    if (selectedDataPoint) {
+      // Generate briefing from selected data point
+      console.log('CrisisBriefing received data point:', selectedDataPoint);
+      const generatedBriefing = generateBriefingFromDataPoint(selectedDataPoint);
+      console.log('Generated briefing:', generatedBriefing);
+      setBriefing(generatedBriefing);
+      setIsHistoricalMode(false);
+      setHistoricalYear(null);
+      return;
+    }
+    
+    // Fallback to backend API or default
+    setIsHistoricalMode(false);
+    setHistoricalYear(null);
     if (!isBackendConfigured()) return;
     crisisApi
       .getCrisisBriefing()
       .then(setBriefing)
       .catch(() => {});
-  }, []);
-
-  async function handlePlayBriefing() {
-    if (audioLoading) return;
-
-    const text = [
-      "Crisis briefing.",
-      `Event: ${briefing.event}.`,
-      `Risk score: ${briefing.riskScore} out of 100.`,
-      `Predicted impact: oil price change ${briefing.predictedImpact.oilPriceChange},`,
-      `supply chain disruption ${briefing.predictedImpact.supplyChainDisruption}.`,
-      `Top factors: ${briefing.topFactors.join(", ")}.`,
-    ].join(" ");
-
-    if (!text.trim()) return;
-
-    setAudioLoading(true);
-
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!res.ok) {
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      if (audioRef.current) {
-        audioRef.current.src = url;
-        await audioRef.current.play().catch(() => {});
-      }
-    } finally {
-      setAudioLoading(false);
-    }
-  }
+  }, [selectedDataPoint, selectedHistoricalEvent]);
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-      <h2 className="mb-4 text-lg font-semibold text-white">Crisis Briefing</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-white">Crisis Briefing</h2>
+        {selectedDataPoint && !isHistoricalMode && (
+          <span className="text-xs text-[var(--accent-blue)] font-medium">
+            📍 Point Selected
+          </span>
+        )}
+        {isHistoricalMode && (
+          <span className="text-xs text-purple-400 font-medium">
+            📅 Historical Analysis
+          </span>
+        )}
+      </div>
+
+      {isHistoricalMode && historicalYear && (
+        <div className="mb-3 rounded-lg border border-purple-500/30 bg-purple-500/10 p-2">
+          <div className="text-xs text-purple-300 font-medium">
+            {historicalYear} Event - Analyzing impact in today's economy
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
@@ -113,41 +172,18 @@ export default function CrisisBriefing() {
 
         <div>
           <div className="text-xs text-[var(--foreground)]/60 mb-2">
-            Top Factors
+            {isHistoricalMode ? "Current Economy Adjustments" : "Top Factors"}
           </div>
           <ul className="space-y-1 text-sm text-[var(--foreground)]/90">
             {briefing.topFactors.map((factor, i) => (
               <li key={i} className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-orange)]" />
+                <span className={`h-1.5 w-1.5 rounded-full ${isHistoricalMode ? "bg-purple-400" : "bg-[var(--accent-orange)]"}`} />
                 {factor}
               </li>
             ))}
           </ul>
         </div>
-
-        {briefing.audioBriefingUrl ? (
-          <a
-            href={briefing.audioBriefingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-blue)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-blue)]/90"
-          >
-            <Play className="h-4 w-4" />
-            Play Audio Briefing
-          </a>
-        ) : (
-          <button
-            type="button"
-            onClick={handlePlayBriefing}
-            disabled={audioLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-blue)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-blue)]/90 disabled:opacity-60"
-          >
-            <Play className="h-4 w-4" />
-            {audioLoading ? "Preparing Audio..." : "Play Audio Briefing"}
-          </button>
-        )}
       </div>
-      <audio ref={audioRef} hidden />
     </div>
   );
 }

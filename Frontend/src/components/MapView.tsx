@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L, { DivIcon } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { mapApi, isBackendConfigured } from "@/lib/api";
+import { HISTORICAL_EVENTS, type HistoricalEvent } from "@/lib/historicalEvents";
 
 type MapViewProps = {
   selectedRegion: string;
+  onHistoricalEventClick?: (event: HistoricalEvent) => void;
 };
 
-type MarkerType = "chokepoint" | "conflict" | "weather" | "shipping";
+type MarkerType = "chokepoint" | "conflict" | "weather" | "shipping" | "historical";
 
 type MarkerData = {
   position: [number, number];
@@ -18,6 +21,9 @@ type MarkerData = {
   date?: string;
   severity?: "low" | "medium" | "high";
   description?: string;
+  riskScore?: number;
+  predictedOilMove?: number;
+  historicalEvent?: HistoricalEvent;
 };
 
 type RegionConfig = {
@@ -224,6 +230,7 @@ function getMarkerIcon(type: MarkerType): DivIcon {
     conflict: { color: "#ef4444", symbol: "✦" },
     weather: { color: "#f59e0b", symbol: "☁" },
     shipping: { color: "#22c55e", symbol: "■" },
+    historical: { color: "#a855f7", symbol: "📅" },
   }[type];
 
   return L.divIcon({
@@ -256,22 +263,69 @@ const FILTERS: Array<"all" | MarkerType> = [
   "conflict",
   "weather",
   "shipping",
+  "historical",
 ];
 
 // Single overall weather overlay layer
 const WEATHER_OVERLAY_URL = `https://maps.openweathermap.org/maps/2.0/weather/PA0/{z}/{x}/{y}?appid=${process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY}`;
 
-export function MapView({ selectedRegion }: MapViewProps) {
+export function MapView({ selectedRegion, onHistoricalEventClick }: MapViewProps) {
   const [activeFilter, setActiveFilter] = useState<"all" | MarkerType>("all");
   const [weatherOverlayOn, setWeatherOverlayOn] = useState(false);
+  const [realtimeMarkers, setRealtimeMarkers] = useState<MarkerData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const config =
     REGION_CONFIG[selectedRegion] ?? REGION_CONFIG["Strait of Hormuz"];
 
+  // Filter historical events for current region
+  const historicalMarkers: MarkerData[] = useMemo(() => {
+    return HISTORICAL_EVENTS
+      .filter(event => event.region === selectedRegion)
+      .map(event => ({
+        position: event.position,
+        label: event.title,
+        type: "historical" as MarkerType,
+        date: `${event.year} (Historical)`,
+        severity: event.severity,
+        description: event.description,
+        riskScore: event.originalRiskScore,
+        predictedOilMove: event.originalOilPriceChange,
+        historicalEvent: event,
+      }));
+  }, [selectedRegion]);
+
+  // Fetch real-time markers from backend
+  useEffect(() => {
+    if (!isBackendConfigured()) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    mapApi
+      .getMapData({ region: selectedRegion })
+      .then((res) => {
+        if (res.markers && Array.isArray(res.markers)) {
+          setRealtimeMarkers(res.markers as MarkerData[]);
+        }
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch map data:", err);
+        setIsLoading(false);
+      });
+  }, [selectedRegion]);
+
+  // Combine static chokepoint markers with real-time event markers and historical events
+  const allMarkers = useMemo(() => {
+    return [...config.markers, ...realtimeMarkers, ...historicalMarkers];
+  }, [config.markers, realtimeMarkers, historicalMarkers]);
+
   const visibleMarkers = useMemo(() => {
-    if (activeFilter === "all") return config.markers;
-    return config.markers.filter((marker) => marker.type === activeFilter);
-  }, [config.markers, activeFilter]);
+    if (activeFilter === "all") return allMarkers;
+    return allMarkers.filter((marker) => marker.type === activeFilter);
+  }, [allMarkers, activeFilter]);
 
   const hasWeatherKey = Boolean(process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY);
 
@@ -314,6 +368,22 @@ export function MapView({ selectedRegion }: MapViewProps) {
         </button>
       </div>
 
+      {/* Status badge */}
+      <div className="absolute bottom-3 right-3 z-[1000] rounded-full border border-white/10 bg-black/65 px-3 py-1 text-xs text-white/80 backdrop-blur-sm">
+        {isLoading ? (
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 animate-spin rounded-full border border-white border-t-transparent" />
+            Loading real-time data...
+          </span>
+        ) : (
+          <span>
+            {realtimeMarkers.length > 0 
+              ? `${realtimeMarkers.length} real-time events` 
+              : "Static data only"}
+          </span>
+        )}
+      </div>
+
       {/* Legend */}
       <div className="absolute bottom-3 left-3 z-[1000] rounded-xl border border-white/10 bg-black/65 px-3 py-2 text-xs text-white/85 backdrop-blur-sm">
         <div className="mb-2 font-semibold text-white">Legend</div>
@@ -334,20 +404,12 @@ export function MapView({ selectedRegion }: MapViewProps) {
             <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
             Shipping
           </div>
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+            Historical Event
+          </div>
         </div>
       </div>
-
-      {/* Last 7 days badge */}
-      <div className="absolute bottom-3 right-3 z-[1000] rounded-full border border-white/10 bg-black/65 px-3 py-1 text-xs text-white/80 backdrop-blur-sm">
-        Showing last 7 days
-      </div>
-
-      {/* Missing API key warning */}
-      {!hasWeatherKey && weatherOverlayOn ? (
-        <div className="absolute right-3 top-16 z-[1000] rounded-lg border border-amber-500/30 bg-black/80 px-3 py-2 text-xs text-amber-300">
-          Add NEXT_PUBLIC_OPENWEATHER_API_KEY to enable weather overlay
-        </div>
-      ) : null}
 
       <MapContainer
         key={`${selectedRegion}-${activeFilter}-${weatherOverlayOn}`}
@@ -374,6 +436,15 @@ export function MapView({ selectedRegion }: MapViewProps) {
             key={`${marker.label}-${marker.position[0]}-${marker.position[1]}`}
             position={marker.position}
             icon={getMarkerIcon(marker.type)}
+            eventHandlers={
+              marker.historicalEvent && onHistoricalEventClick
+                ? {
+                    click: () => {
+                      onHistoricalEventClick(marker.historicalEvent!);
+                    },
+                  }
+                : undefined
+            }
           >
             <Popup>
               <div className="min-w-[180px] space-y-2">
@@ -389,11 +460,29 @@ export function MapView({ selectedRegion }: MapViewProps) {
                     Severity: {marker.severity}
                   </div>
                 ) : null}
+                {marker.riskScore ? (
+                  <div className="text-xs text-gray-600">
+                    Risk Score: {marker.riskScore}/100
+                  </div>
+                ) : null}
+                {marker.predictedOilMove ? (
+                  <div className="text-xs text-gray-600">
+                    Oil Price Impact: +{marker.predictedOilMove}%
+                  </div>
+                ) : null}
                 {marker.description ? (
                   <div className="text-xs text-gray-700">
                     {marker.description}
                   </div>
                 ) : null}
+                {marker.historicalEvent && (
+                  <button
+                    onClick={() => onHistoricalEventClick?.(marker.historicalEvent!)}
+                    className="mt-2 w-full rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white hover:bg-purple-700"
+                  >
+                    Analyze Current Impact
+                  </button>
+                )}
               </div>
             </Popup>
           </Marker>

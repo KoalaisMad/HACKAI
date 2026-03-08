@@ -2,6 +2,7 @@
 
 import { Globe } from "lucide-react";
 import dynamic from "next/dynamic";
+import type { HistoricalEvent } from "@/lib/historicalEvents";
 
 const MapComponent = dynamic(
   () => import("./MapView").then((mod) => mod.MapView),
@@ -17,10 +18,12 @@ const MapComponent = dynamic(
 
 type GlobalRiskMapProps = {
   selectedRegion: string;
+  onHistoricalEventClick?: (event: HistoricalEvent) => void;
 };
 
 export default function GlobalRiskMap({
   selectedRegion,
+  onHistoricalEventClick,
 }: GlobalRiskMapProps) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
@@ -36,7 +39,10 @@ export default function GlobalRiskMap({
       </div>
 
       <div className="relative aspect-[4/3] min-h-[300px] overflow-hidden rounded-lg bg-[#0d1117]">
-        <MapComponent selectedRegion={selectedRegion} />
+        <MapComponent 
+          selectedRegion={selectedRegion}
+          onHistoricalEventClick={onHistoricalEventClick}
+        />
       </div>
     </div>
   );

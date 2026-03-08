@@ -29,3 +29,24 @@ export type {
   MapDataResponse,
   ApiError,
 } from "./api-types";
+
+export {
+  parseOilPredictions,
+  generateRealisticPredictions,
+  formatPercentage,
+  getPredictionSummary,
+  predictionsToChartData,
+} from "./oilPredictions";
+
+export type { OilPrediction } from "./oilPredictions";
+
+export {
+  generateRealTimeOilData,
+  getCurrentOilPrice,
+  getCurrentRisk,
+  simulateEventImpact,
+  resetOilData,
+  fetchRealOilPrice,
+} from "./realTimeOilData";
+
+export type { RiskOilDataPoint } from "./realTimeOilData";
