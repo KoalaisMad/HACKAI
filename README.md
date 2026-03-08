@@ -193,3 +193,20 @@ These stored prediction snapshots allow the system to:
 - Maintain a transparent historical record of forecasts
 
 Using MongoDB Atlas enables **scalable, real-time data storage** while supporting rapid queries across user predictions and market activity.
+```
+---
+## Models - Predictions
+**Models Used:**
+
+- FinBERT
+- XG-Boost
+- GARCH-X
+- Random Forest
+- Gradient Boosting
+
+**Purpose:**
+
+  The platform’s predictive capabilities are supported by several custom machine learning models designed to forecast short-term oil price movements using both shipment traffic and news data.
+
+  For predictions based on news data, we performed structured feature engineering and leveraged the financial language model FinBERT to efficiently extract relevant signals from news articles. This approach enabled improved training efficiency and model accuracy. We also implemented a GARCH-X volatility model, which captures time-varying market volatility while incorporating exogenous news features. In addition, we trained a gradient boosting model using LightGBM to further enhance predictive performance. Model performance was evaluated using Root Mean Squared Error (RMSE) and the coefficient of determination (R²).
+  For shipment-traffic-based predictions, we trained multiple ensemble learning models including XGBoost, Random Forest, and Gradient Boosting. To better understand the relative importance of shipping-related features, we applied Principal Component Analysis (PCA) for dimensionality reduction and feature impact analysis. These models were also evaluated using RMSE and R² to assess predictive accuracy.
