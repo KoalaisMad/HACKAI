@@ -16,6 +16,7 @@ export default function ChatBot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [loadingTTS, setLoadingTTS] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -24,9 +25,11 @@ export default function ChatBot() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function speak(text: string) {
+  async function speak(text: string, messageIndex?: number) {
     if (!text.trim()) return;
     if (!API_BASE_URL) return; // TTS is provided by the backend when NEXT_PUBLIC_API_URL is set
+
+    if (messageIndex !== undefined) setLoadingTTS(messageIndex);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/tts`, {
@@ -46,13 +49,15 @@ export default function ChatBot() {
           // ignore JSON parse errors
         }
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "model",
-            content: `(Voice error: ${errorMessage})`,
-          },
-        ]);
+        if (messageIndex === undefined) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "model",
+              content: `(Voice error: ${errorMessage})`,
+            },
+          ]);
+        }
         return;
       }
 
@@ -62,9 +67,18 @@ export default function ChatBot() {
       setMessages((prev) => {
         if (prev.length === 0) return prev;
         const updated = [...prev];
-        const lastIndex = updated.length - 1;
-        if (updated[lastIndex].role === "model" && updated[lastIndex].content === text) {
-          updated[lastIndex] = { ...updated[lastIndex], audioUrl: url };
+        
+        if (messageIndex !== undefined && messageIndex < updated.length) {
+          // Update specific message by index
+          if (updated[messageIndex].role === "model") {
+            updated[messageIndex] = { ...updated[messageIndex], audioUrl: url };
+          }
+        } else {
+          // Update last model message (auto-play behavior)
+          const lastIndex = updated.length - 1;
+          if (updated[lastIndex].role === "model" && updated[lastIndex].content === text) {
+            updated[lastIndex] = { ...updated[lastIndex], audioUrl: url };
+          }
         }
         return updated;
       });
@@ -77,6 +91,8 @@ export default function ChatBot() {
       }
     } catch {
       // ignore ElevenLabs failures; user still sees text
+    } finally {
+      if (messageIndex !== undefined) setLoadingTTS(null);
     }
   }
 
@@ -262,14 +278,20 @@ export default function ChatBot() {
                   }`}
                 >
                   <span className="whitespace-pre-wrap break-words">{m.content}</span>
-                  {m.role === "model" && m.audioUrl && (
+                  {m.role === "model" && API_BASE_URL && (
                     <button
                       type="button"
-                      onClick={() => playAudio(m.audioUrl)}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/20 text-[var(--foreground)] hover:bg-black/30"
-                      aria-label="Play response audio"
+                      onClick={() => m.audioUrl ? playAudio(m.audioUrl) : speak(m.content, i)}
+                      disabled={loadingTTS === i}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/20 text-[var(--foreground)] hover:bg-black/30 disabled:opacity-50 flex-shrink-0"
+                      aria-label={m.audioUrl ? "Play response audio" : "Generate and play audio"}
+                      title={m.audioUrl ? "Play audio" : "Generate speech"}
                     >
-                      <Volume2 className="h-3 w-3" />
+                      {loadingTTS === i ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Volume2 className="h-3 w-3" />
+                      )}
                     </button>
                   )}
                 </div>
