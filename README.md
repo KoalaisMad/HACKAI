@@ -43,60 +43,80 @@ Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `Frontend/.env.local` to use 
 - **Recharts** (line charts)
 - **Lucide React** (icons)
 
-## Backend integration
+## AI Intelligence & Voice Assistant
 
-The frontend calls a backend when `NEXT_PUBLIC_API_URL` is set (e.g. in `.env`). Copy `Frontend/.env.example` to `Frontend/.env` and set your API base URL (no trailing slash). When set:
+## Google Gemini AI 
 
-- **Auth**: Login, signup, and session use the backend; the client sends `Authorization: Bearer <token>` and expects your backend to return `user` and optionally `token` from login/signup and to expose `/api/auth/session` for the current user.
-- **Dashboard**: Event feed, crisis briefing, shipping status, risk/oil chart (and optionally map data) are fetched from the backend. If the URL is not set, the app uses built-in mock data.
+### Purpose
 
-Expected backend paths (relative to base URL):
+The **StraitWatch Assistant** is an AI-powered chatbot that helps users understand maritime risks, geopolitical events, and shipping disruptions in real time. It translates complex data from multiple sources—such as news feeds, ML predictions, and shipping activity—into clear explanations and actionable insights.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/auth/login` | Login (body: `email`, `password`) |
-| POST | `/api/auth/signup` | Signup (body: `email`, `password`, `name`, `country?`) |
-| POST | `/api/auth/logout` | Logout |
-| GET | `/api/auth/session` | Current user (Bearer token) |
-| GET | `/api/events` | Event feed + activity chart |
-| GET | `/api/crisis/briefing` | Crisis briefing |
-| GET | `/api/shipping/status` | Shipping metrics |
-| GET | `/api/charts/risk-oil` | Risk & oil price trend |
-| GET | `/api/map/data` | Map alerts and ships |
-| POST | `/api/chat` | Chat (Gemini); body: `messages` array of `{ role, content }` |
-| POST | `/api/tts` | Text-to-speech for chatbot (body: `text`, optional `voiceId`) |
+### Implementation
 
-Request/response types are in `Frontend/src/lib/api-types.ts`. The client is in `Frontend/src/lib/api.ts` (and re-exported from `@/lib`).
+**Backend**
 
-**StraitWatch Assistant (chat + voice):** When `NEXT_PUBLIC_API_URL` is set, the chatbot uses the backend for both Gemini (chat) and ElevenLabs (TTS). Set `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, and `ELEVENLABS_VOICE_ID` in the backend `.env` (see `Backend/.env.example`).
+File: `index.js`
 
-## Project Structure
+- Uses the `@google/generative-ai` SDK  
+- Model: **gemini-2.0-flash**  
+- Endpoint: `POST /api/chat`
 
-All source code is under `Frontend/`:
+The backend receives a conversation history from the frontend and sends it to Gemini for processing. The system prompt configures the assistant with knowledge about:
 
-```
-Frontend/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx    # Root layout with dark theme
-│   │   ├── page.tsx      # Dashboard page
-│   │   ├── login/        # Login page
-│   │   ├── signup/       # Signup page
-│   │   └── globals.css   # Global styles & CSS variables
-│   ├── components/
-│   │   ├── Header.tsx           # Top bar with region/time selectors
-│   │   ├── GlobalRiskMap.tsx    # Map panel with alerts
-│   │   ├── EventFeed.tsx        # Event list + activity chart
-│   │   ├── RiskOilPriceChart.tsx # Risk & oil price trends
-│   │   ├── ShippingStatus.tsx   # Shipping metrics
-│   │   └── CrisisBriefing.tsx   # Crisis summary panel
-│   ├── context/
-│   │   └── AuthContext.tsx  # Auth state
-│   └── lib/
-│       ├── api.ts           # Backend API client
-│       ├── api-types.ts     # Request/response types
-│       └── index.ts         # Re-exports
-├── next.config.js
-├── package.json
-└── tsconfig.json
-```
+- maritime shipping routes  
+- geopolitical incidents  
+- oil supply chain risks  
+- StraitWatch risk scores  
+- ML model predictions  
+
+Gemini then generates a contextual response that explains the situation in natural language.
+
+**Frontend**
+
+File: `ChatBot.tsx`
+
+- Sends user messages to `/api/chat`  
+- Maintains conversation history  
+- Displays messages in a conversational UI  
+- Supports **voice input using the Web Speech API**
+
+This allows users to interact with the system using natural language instead of navigating dashboards or raw datasets.
+
+### Data Context
+
+Gemini responses are augmented with summarized outputs from:
+
+- machine learning risk prediction models  
+- shipping traffic signals  
+- global incident datasets  
+- energy market indicators  
+
+This ensures the assistant provides **data-grounded explanations rather than generic AI responses**.
+
+---
+
+## ElevenLabs 
+
+### Purpose
+
+To improve accessibility and safety, StraitWatch converts AI responses into **natural spoken briefings** using ElevenLabs.
+
+This enables users—such as analysts, operators, or drivers—to **receive risk updates without needing to look at their screens**.
+
+### Implementation
+
+**Backend**
+
+File: `index.js`
+
+- Uses `@elevenlabs/elevenlabs-js`  
+- Endpoint: `POST /api/tts`  
+- Model: **eleven_multilingual_v2**
+
+Input:
+
+```json
+{
+  "text": "AI generated response",
+  "voiceId": "optional"
+}
