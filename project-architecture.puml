@@ -1,0 +1,306 @@
+@startuml StraitWatch Crisis Intelligence System
+!theme vibrant
+skinparam backgroundColor #1a1a2e
+skinparam defaultFontColor #eaeaea
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam linetype ortho
+
+' Color definitions
+!define FRONTEND_COLOR #4fc3f7   
+!define BACKEND_COLOR #66bb6a
+!define ML_COLOR #ffa726
+!define DB_COLOR #ab47bc
+!define EXTERNAL_COLOR #ef5350
+!define DATA_COLOR #26c6da
+
+title <size:20><b>StraitWatch Crisis Intelligence System</b></size>\n<size:14>Maritime Risk Assessment & Real-Time Monitoring Platform</size>
+
+' ============================================
+' EXTERNAL SERVICES
+' ============================================
+package "External Services" as external {
+  cloud "Google Gemini AI" as gemini #EXTERNAL_COLOR
+  component "Generative AI\nChat API" as geminiapi #EXTERNAL_COLOR
+  gemini -down-> geminiapi
+  
+  cloud "ElevenLabs" as elevenlabs #EXTERNAL_COLOR
+  component "Text-to-Speech\nVoice API" as ttsapi #EXTERNAL_COLOR
+  elevenlabs -down-> ttsapi
+  
+  database "MongoDB Atlas" as mongodb #DB_COLOR
+  component "straitwatch_data DB" as dbname #DB_COLOR
+  component "news Collection" as newscoll #DB_COLOR
+  component "users Collection" as userscoll #DB_COLOR
+  mongodb -down-> dbname
+  mongodb -down-> newscoll
+  mongodb -down-> userscoll
+}
+
+' ============================================
+' BACKEND LAYER
+' ============================================
+package "Backend - Node.js/Express" as backend {
+  
+  component "API Server\n(Port 8001)" as apiserver #BACKEND_COLOR {
+    
+    rectangle "Authentication" as auth {
+      [POST /api/auth/signup]
+      [POST /api/auth/login]
+      [POST /api/auth/logout]
+      [GET /api/auth/session]
+    }
+    
+    rectangle "Dashboard APIs" as dashboard {
+      [GET /api/events]
+      [GET /api/crisis/briefing]
+      [GET /api/shipping/status]
+      [GET /api/charts/risk-oil]
+      [GET /api/map/data]
+    }
+    
+    rectangle "AI Services" as ai {
+      [POST /api/chat]
+      [POST /api/tts]
+    }
+  }
+  
+  component "Auth Module" as authmodule #BACKEND_COLOR {
+    [createUser()]
+    [verifyUser()]
+    [signToken()]
+    [verifyToken()]
+  }
+  
+  file "users.json" as usersjson #DATA_COLOR
+}
+
+' ============================================
+' FRONTEND LAYER
+' ============================================
+package "Frontend - Next.js 16 (TypeScript)" as frontend {
+  
+  rectangle "Pages (App Router)" as pages #FRONTEND_COLOR {
+    [/ (Dashboard)\npage.tsx]
+    [/login\npage.tsx]
+    [/signup\npage.tsx]
+    [/gas-stations\npage.tsx]
+    [/solana-predictions\npage.tsx]
+  }
+  
+  rectangle "Core Components" as components #FRONTEND_COLOR {
+    [Header]
+    [GlobalRiskMap]
+    [EventFeed]
+    [RiskOilPriceChart]
+    [ShippingStatus]
+    [CrisisBriefing]
+    [ChatBot]
+    [GasStationsMap]
+    [SolanaPredictionsChart]
+  }
+  
+  rectangle "Routing & Auth" as routing #FRONTEND_COLOR {
+    [ProtectedRoute]
+    [AuthContext]
+    [NavigationSidebar]
+  }
+  
+  rectangle "API Client & Utils" as libs #FRONTEND_COLOR {
+    [api.ts\nAPI Client]
+    [api-types.ts\nType Definitions]
+    [historicalEvents.ts]
+    [oilPredictions.ts]
+    [realTimeOilData.ts]
+    [investmentCalculator.ts]
+    [solanaPredictions.ts]
+  }
+  
+  rectangle "API Routes" as apiroutes #FRONTEND_COLOR {
+    [/api/chat]
+    [/api/tts]
+  }
+}
+
+' ============================================
+' ML MODELS LAYER
+' ============================================
+package "ML Models - Python" as mlmodels {
+  
+  component "Training Pipeline" as training #ML_COLOR {
+    [EventsToOil.py\nRandom Forest\nRegressor]
+    [generate_realistic_predictions.py]
+    [mock_dataset.py]
+  }
+  
+  component "Prediction Service" as prediction #ML_COLOR {
+    [predict_events.py\nOil Price Impact\nPredictor]
+  }
+  
+  file "oil_move_model.pkl" as model #ML_COLOR
+  
+  storage "Training Features" as features #ML_COLOR
+  component "Event Date/Time" as feat1 #ML_COLOR
+  component "Country/Region" as feat2 #ML_COLOR
+  component "Event Type" as feat3 #ML_COLOR
+  component "Severity Score" as feat4 #ML_COLOR
+  features -down-> feat1
+  features -down-> feat2
+  features -down-> feat3
+  features -down-> feat4
+}
+
+' ============================================
+' DATA FILES
+' ============================================
+package "Data & Analysis" as data {
+  file "oil_price_predictions.csv" as oilcsv #DATA_COLOR
+  file "titles.csv" as titlescsv #DATA_COLOR
+  file "crude_oil_news_analysis.ipynb" as notebook #DATA_COLOR
+}
+
+' ============================================
+' USER LAYER
+' ============================================
+actor "End User\n(Browser)" as user #4fc3f7
+
+' ============================================
+' CONNECTIONS - USER TO FRONTEND
+' ============================================
+user -down-> [/ (Dashboard)\npage.tsx] : Access Dashboard
+user -down-> [/login\npage.tsx] : Login
+user -down-> [/signup\npage.tsx] : Register
+user -down-> [/gas-stations\npage.tsx] : View Gas Stations
+user -down-> [/solana-predictions\npage.tsx] : View Predictions
+
+' ============================================
+' CONNECTIONS - FRONTEND INTERNAL
+' ============================================
+[/ (Dashboard)\npage.tsx] --> [Header]
+[/ (Dashboard)\npage.tsx] --> [GlobalRiskMap]
+[/ (Dashboard)\npage.tsx] --> [EventFeed]
+[/ (Dashboard)\npage.tsx] --> [RiskOilPriceChart]
+[/ (Dashboard)\npage.tsx] --> [ShippingStatus]
+[/ (Dashboard)\npage.tsx] --> [CrisisBriefing]
+[/ (Dashboard)\npage.tsx] --> [ChatBot]
+[/ (Dashboard)\npage.tsx] --> [ProtectedRoute] : Auth Check
+
+[/gas-stations\npage.tsx] --> [GasStationsMap]
+[/solana-predictions\npage.tsx] --> [SolanaPredictionsChart]
+
+[ChatBot] --> [api.ts\nAPI Client] : Send Messages
+[ProtectedRoute] --> [AuthContext] : Get Auth State
+[AuthContext] --> [api.ts\nAPI Client] : API Calls
+
+components --> libs : Use Utils & API
+pages --> libs : Data Fetching
+
+' ============================================
+' CONNECTIONS - FRONTEND TO BACKEND
+' ============================================
+[api.ts\nAPI Client] -down-> apiserver : HTTP/REST API\n(Port 8001)
+
+[api.ts\nAPI Client] --> [POST /api/auth/signup] : Register User
+[api.ts\nAPI Client] --> [POST /api/auth/login] : Authenticate
+[api.ts\nAPI Client] --> [GET /api/auth/session] : Get Session
+[api.ts\nAPI Client] --> [GET /api/events] : Fetch Events
+[api.ts\nAPI Client] --> [GET /api/crisis/briefing] : Get Briefing
+[api.ts\nAPI Client] --> [GET /api/shipping/status] : Get Shipping Data
+[api.ts\nAPI Client] --> [GET /api/charts/risk-oil] : Get Chart Data
+[api.ts\nAPI Client] --> [GET /api/map/data] : Get Map Data
+[api.ts\nAPI Client] --> [POST /api/chat] : Chat Request
+[api.ts\nAPI Client] --> [POST /api/tts] : Voice Request
+
+' ============================================
+' CONNECTIONS - BACKEND INTERNAL
+' ============================================
+auth --> authmodule : Use Auth Functions
+authmodule --> usersjson : Store Users\n(Local Dev)
+authmodule --> mongodb : Store Users\n(Production)
+
+apiserver --> mongodb : Query Data
+[POST /api/chat] --> gemini : Generate Response
+[POST /api/tts] --> elevenlabs : Generate Voice
+
+' ============================================
+' CONNECTIONS - ML MODELS
+' ============================================
+[mock_dataset.py] --> mongodb : Insert Training Data
+training --> features : Extract Features
+training --> model : Train & Save Model
+[EventsToOil.py] --> mongodb : Read Events
+[EventsToOil.py] --> model : Save
+[predict_events.py] --> model : Load
+[predict_events.py] --> mongodb : Read Events\nWrite Predictions
+model --> prediction : Load Model
+
+mongodb -up-> dashboard : Provide Data
+
+' ============================================
+' CONNECTIONS - DATA FILES
+' ============================================
+oilcsv --> libs : Load Predictions
+notebook --> mongodb : Analysis
+titlescsv --> data : Reference Data
+
+' ============================================
+' NOTES
+' ============================================
+note right of user
+  <b>Client Features:</b>
+  • Real-time risk monitoring
+  • Interactive global map
+  • Historical event tracking
+  • Crisis briefing & alerts
+  • AI-powered chatbot
+  • Voice briefing (TTS)
+  • Solana predictions
+  • Gas station finder
+end note
+
+note bottom of apiserver
+  <b>Tech Stack:</b>
+  • Express.js
+  • JWT Authentication
+  • Google Gemini AI
+  • ElevenLabs TTS
+  • MongoDB Driver
+  • CORS enabled
+end note
+
+note bottom of frontend
+  <b>Tech Stack:</b>
+  • Next.js 16 (App Router)
+  • TypeScript
+  • Tailwind CSS
+  • Recharts
+  • Lucide Icons
+  • Context API
+end note
+
+note bottom of mlmodels
+  <b>Tech Stack:</b>
+  • Python 3.x
+  • scikit-learn
+  • pandas/numpy
+  • Random Forest
+  • Joblib
+  • PyMongo
+end note
+
+legend top left
+  <b><size:14>StraitWatch System Architecture</size></b>
+  |<#4fc3f7> Frontend (Next.js) |
+  |<#66bb6a> Backend (Node.js) |
+  |<#ffa726> ML Models (Python) |
+  |<#ab47bc> Database (MongoDB) |
+  |<#ef5350> External Services |
+  |<#26c6da> Data Files |
+  
+  <b>Data Flow:</b>
+  User → Frontend → Backend → MongoDB/AI
+  ML Models ⟷ MongoDB (Training & Predictions)
+  Backend → External APIs (Gemini, ElevenLabs)
+end legend
+
+@enduml

@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { MongoClient } from "mongodb";
 import {
   createUser,
@@ -103,17 +103,15 @@ app.post("/api/chat", async (req, res) => {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenerativeAI(apiKey);
+    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const contents = messages.map((m) => m.content ?? "").join("\n\n");
     const fullPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${contents}`;
 
-    const result = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: fullPrompt,
-    });
-
-    const text = result.text;
+    const result = await model.generateContent(fullPrompt);
+    const response = await result.response;
+    const text = response.text();
     return res.json({ content: text });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Gemini request failed";
@@ -288,7 +286,8 @@ app.get("/api/crisis/briefing", async (req, res) => {
 
     if (apiKey) {
       try {
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenerativeAI(apiKey);
+        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const eventDetails = recentEvents.map((evt, idx) => 
           `${idx + 1}. ${evt.headline || evt.title} (Severity: ${evt.severityScore}, Predicted Oil Impact: ${(evt.modelPredictedOilMovePct || 0).toFixed(1)}%)`
@@ -310,12 +309,10 @@ Format your response EXACTLY as JSON:
   "topFactors": ["factor 1", "factor 2", "factor 3"]
 }`;
 
-        const result = await ai.models.generateContent({
-          model: "gemini-1.5-flash",
-          contents: prompt,
-        });
-
-        const text = result.text;
+        //const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
         
         // Extract JSON from response (handle markdown code blocks)
         let jsonText = text.trim();

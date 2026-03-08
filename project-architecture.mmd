@@ -1,0 +1,304 @@
+graph TB
+    %% ============================================
+    %% STYLE DEFINITIONS
+    %% ============================================
+    classDef frontendStyle fill:#4fc3f7,stroke:#333,stroke-width:2px,color:#000
+    classDef backendStyle fill:#66bb6a,stroke:#333,stroke-width:2px,color:#000
+    classDef mlStyle fill:#ffa726,stroke:#333,stroke-width:2px,color:#000
+    classDef dbStyle fill:#ab47bc,stroke:#333,stroke-width:2px,color:#fff
+    classDef externalStyle fill:#ef5350,stroke:#333,stroke-width:2px,color:#fff
+    classDef dataStyle fill:#26c6da,stroke:#333,stroke-width:2px,color:#000
+    classDef userStyle fill:#4fc3f7,stroke:#333,stroke-width:3px,color:#000
+
+    %% ============================================
+    %% USER LAYER
+    %% ============================================
+    User[("👤 End User<br/>(Browser)")]:::userStyle
+
+    %% ============================================
+    %% FRONTEND LAYER
+    %% ============================================
+    subgraph Frontend["🖥️ Frontend - Next.js 16 (TypeScript)"]
+        direction TB
+        
+        subgraph Pages["📄 Pages (App Router)"]
+            PageDashboard["/ Dashboard<br/>page.tsx"]
+            PageLogin["/login<br/>page.tsx"]
+            PageSignup["/signup<br/>page.tsx"]
+            PageGas["/gas-stations<br/>page.tsx"]
+            PageSolana["/solana-predictions<br/>page.tsx"]
+        end
+
+        subgraph Components["🧩 Core Components"]
+            CompHeader["Header"]
+            CompMap["GlobalRiskMap"]
+            CompFeed["EventFeed"]
+            CompRiskChart["RiskOilPriceChart"]
+            CompShipping["ShippingStatus"]
+            CompBriefing["CrisisBriefing"]
+            CompChatbot["ChatBot"]
+            CompGasMap["GasStationsMap"]
+            CompSolanaChart["SolanaPredictionsChart"]
+        end
+
+        subgraph Routing["🔐 Routing & Auth"]
+            CompProtected["ProtectedRoute"]
+            CompAuthContext["AuthContext"]
+            CompNav["NavigationSidebar"]
+        end
+
+        subgraph Libs["📚 API Client & Utils"]
+            LibAPI["api.ts<br/>API Client"]
+            LibTypes["api-types.ts<br/>Type Definitions"]
+            LibHistorical["historicalEvents.ts"]
+            LibOilPred["oilPredictions.ts"]
+            LibRealtime["realTimeOilData.ts"]
+            LibInvest["investmentCalculator.ts"]
+            LibSolana["solanaPredictions.ts"]
+        end
+
+        subgraph APIRoutes["🔌 API Routes"]
+            FeAPIChat["/api/chat"]
+            FeAPITTS["/api/tts"]
+        end
+    end
+
+    %% ============================================
+    %% BACKEND LAYER
+    %% ============================================
+    subgraph Backend["⚙️ Backend - Node.js/Express"]
+        direction TB
+        
+        subgraph APIServer["🌐 API Server (Port 8001)"]
+            direction TB
+            
+            subgraph Auth["Authentication"]
+                APISignup["POST /api/auth/signup"]
+                APILogin["POST /api/auth/login"]
+                APILogout["POST /api/auth/logout"]
+                APISession["GET /api/auth/session"]
+            end
+
+            subgraph Dashboard["Dashboard APIs"]
+                APIEvents["GET /api/events"]
+                APIBriefing["GET /api/crisis/briefing"]
+                APIShipping["GET /api/shipping/status"]
+                APIRiskOil["GET /api/charts/risk-oil"]
+                APIMap["GET /api/map/data"]
+            end
+
+            subgraph AI["AI Services"]
+                APIChat["POST /api/chat"]
+                APITTS["POST /api/tts"]
+            end
+        end
+
+        subgraph AuthModule["Auth Module"]
+            FnCreateUser["createUser()"]
+            FnVerifyUser["verifyUser()"]
+            FnSignToken["signToken()"]
+            FnVerifyToken["verifyToken()"]
+        end
+
+        UsersJSON[("📄 users.json")]:::dataStyle
+    end
+
+    %% ============================================
+    %% EXTERNAL SERVICES
+    %% ============================================
+    subgraph External["☁️ External Services"]
+        direction TB
+        
+        subgraph GeminiService["Google Gemini AI"]
+            GeminiAPI["Generative AI<br/>Chat API"]
+        end
+
+        subgraph ElevenLabsService["ElevenLabs"]
+            TTSAPI["Text-to-Speech<br/>Voice API"]
+        end
+
+        subgraph MongoService["MongoDB Atlas"]
+            MongoDB[("🗄️ MongoDB")]
+            DBName["straitwatch_data DB"]
+            NewsColl["news Collection"]
+            UsersColl["users Collection"]
+        end
+    end
+
+    %% ============================================
+    %% ML MODELS LAYER
+    %% ============================================
+    subgraph MLModels["🤖 ML Models - Python"]
+        direction TB
+        
+        subgraph Training["Training Pipeline"]
+            MLEventsToOil["EventsToOil.py<br/>Random Forest<br/>Regressor"]
+            MLGenPred["generate_realistic_predictions.py"]
+            MLMock["mock_dataset.py"]
+        end
+
+        subgraph Prediction["Prediction Service"]
+            MLPredict["predict_events.py<br/>Oil Price Impact<br/>Predictor"]
+        end
+
+        Model[("📦 oil_move_model.pkl")]:::mlStyle
+
+        subgraph Features["Training Features"]
+            Feat1["Event Date/Time"]
+            Feat2["Country/Region"]
+            Feat3["Event Type"]
+            Feat4["Severity Score"]
+        end
+    end
+
+    %% ============================================
+    %% DATA FILES
+    %% ============================================
+    subgraph Data["📊 Data & Analysis"]
+        OilCSV[("oil_price_predictions.csv")]:::dataStyle
+        TitlesCSV[("titles.csv")]:::dataStyle
+        Notebook[("crude_oil_news_analysis.ipynb")]:::dataStyle
+    end
+
+    %% ============================================
+    %% CONNECTIONS - USER TO FRONTEND
+    %% ============================================
+    User -->|Access Dashboard| PageDashboard
+    User -->|Login| PageLogin
+    User -->|Register| PageSignup
+    User -->|View Gas Stations| PageGas
+    User -->|View Predictions| PageSolana
+
+    %% ============================================
+    %% CONNECTIONS - FRONTEND INTERNAL
+    %% ============================================
+    PageDashboard --> CompHeader
+    PageDashboard --> CompMap
+    PageDashboard --> CompFeed
+    PageDashboard --> CompRiskChart
+    PageDashboard --> CompShipping
+    PageDashboard --> CompBriefing
+    PageDashboard --> CompChatbot
+    PageDashboard -->|Auth Check| CompProtected
+
+    PageGas --> CompGasMap
+    PageSolana --> CompSolanaChart
+
+    CompChatbot -->|Send Messages| LibAPI
+    CompProtected -->|Get Auth State| CompAuthContext
+    CompAuthContext -->|API Calls| LibAPI
+
+    Components -.->|Use Utils & API| Libs
+    Pages -.->|Data Fetching| Libs
+
+    %% ============================================
+    %% CONNECTIONS - FRONTEND TO BACKEND
+    %% ============================================
+    LibAPI ==>|HTTP/REST API<br/>Port 8001| APIServer
+
+    LibAPI --> APISignup
+    LibAPI --> APILogin
+    LibAPI --> APISession
+    LibAPI --> APIEvents
+    LibAPI --> APIBriefing
+    LibAPI --> APIShipping
+    LibAPI --> APIRiskOil
+    LibAPI --> APIMap
+    LibAPI --> APIChat
+    LibAPI --> APITTS
+
+    %% ============================================
+    %% CONNECTIONS - BACKEND INTERNAL
+    %% ============================================
+    Auth --> AuthModule
+    AuthModule -->|Store Users<br/>Local Dev| UsersJSON
+    AuthModule -->|Store Users<br/>Production| MongoDB
+
+    APIServer -->|Query Data| MongoDB
+    APIChat -->|Generate Response| GeminiAPI
+    APITTS -->|Generate Voice| TTSAPI
+
+    %% ============================================
+    %% CONNECTIONS - MONGODB STRUCTURE
+    %% ============================================
+    MongoDB --> DBName
+    DBName --> NewsColl
+    DBName --> UsersColl
+
+    %% ============================================
+    %% CONNECTIONS - ML MODELS
+    %% ============================================
+    MLMock -->|Insert Training Data| MongoDB
+    Training -->|Extract Features| Features
+    Training -->|Train & Save Model| Model
+    MLEventsToOil -->|Read Events| MongoDB
+    MLEventsToOil -->|Save| Model
+    MLPredict -->|Load| Model
+    MLPredict -->|Read Events<br/>Write Predictions| MongoDB
+    Model -->|Load Model| Prediction
+
+    MongoDB -->|Provide Data| Dashboard
+
+    %% ============================================
+    %% CONNECTIONS - DATA FILES
+    %% ============================================
+    OilCSV -->|Load Predictions| Libs
+    Notebook -->|Analysis| MongoDB
+    TitlesCSV -->|Reference Data| Notebook
+
+    %% ============================================
+    %% APPLY STYLES
+    %% ============================================
+    class PageDashboard,PageLogin,PageSignup,PageGas,PageSolana frontendStyle
+    class CompHeader,CompMap,CompFeed,CompRiskChart,CompShipping,CompBriefing,CompChatbot,CompGasMap,CompSolanaChart frontendStyle
+    class CompProtected,CompAuthContext,CompNav frontendStyle
+    class LibAPI,LibTypes,LibHistorical,LibOilPred,LibRealtime,LibInvest,LibSolana frontendStyle
+    class FeAPIChat,FeAPITTS frontendStyle
+
+    class APISignup,APILogin,APILogout,APISession backendStyle
+    class APIEvents,APIBriefing,APIShipping,APIRiskOil,APIMap backendStyle
+    class APIChat,APITTS backendStyle
+    class FnCreateUser,FnVerifyUser,FnSignToken,FnVerifyToken backendStyle
+
+    class GeminiAPI,TTSAPI externalStyle
+    class MongoDB,DBName,NewsColl,UsersColl dbStyle
+
+    class MLEventsToOil,MLGenPred,MLMock,MLPredict mlStyle
+    class Feat1,Feat2,Feat3,Feat4 mlStyle
+
+    %% ============================================
+    %% NOTES (as comments in Mermaid)
+    %% ============================================
+    %% Client Features:
+    %% • Real-time risk monitoring
+    %% • Interactive global map
+    %% • Historical event tracking
+    %% • Crisis briefing & alerts
+    %% • AI-powered chatbot
+    %% • Voice briefing (TTS)
+    %% • Solana predictions
+    %% • Gas station finder
+
+    %% Backend Tech Stack:
+    %% • Express.js
+    %% • JWT Authentication
+    %% • Google Gemini AI
+    %% • ElevenLabs TTS
+    %% • MongoDB Driver
+    %% • CORS enabled
+
+    %% Frontend Tech Stack:
+    %% • Next.js 16 (App Router)
+    %% • TypeScript
+    %% • Tailwind CSS
+    %% • Recharts
+    %% • Lucide Icons
+    %% • Context API
+
+    %% ML Tech Stack:
+    %% • Python 3.x
+    %% • scikit-learn
+    %% • pandas/numpy
+    %% • Random Forest
+    %% • Joblib
+    %% • PyMongo

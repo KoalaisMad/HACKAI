@@ -25,7 +25,7 @@ export default function Home() {
           setSelectedRegion={setSelectedRegion}
         />
 
-        <main className="p-6">
+        <main className="p-6 relative z-0">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Global Risk Map - takes 2 columns */}
             <div className="lg:col-span-2">

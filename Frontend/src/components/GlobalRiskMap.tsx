@@ -38,7 +38,7 @@ export default function GlobalRiskMap({
         </span>
       </div>
 
-      <div className="relative aspect-[4/3] min-h-[300px] overflow-hidden rounded-lg bg-[#0d1117]">
+      <div className="relative aspect-[4/3] min-h-[300px] overflow-hidden rounded-lg bg-[#0d1117] z-0">
         <MapComponent 
           selectedRegion={selectedRegion}
           onHistoricalEventClick={onHistoricalEventClick}

@@ -10,8 +10,10 @@ import {
   UserPlus,
   LogOut,
   Clock3,
+  Menu,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import NavigationSidebar from "./NavigationSidebar";
 
 const CHOKEPOINTS = [
   "Strait of Hormuz",
@@ -49,6 +51,7 @@ export default function Header({
   const [selectedTimezone, setSelectedTimezone] = useState("UTC");
   const [currentTime, setCurrentTime] = useState("");
   const [timezoneLabel, setTimezoneLabel] = useState("UTC");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -97,13 +100,22 @@ export default function Header({
   }, [selectedTimezone]);
 
   return (
-    <header className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]">
-          <span className="text-lg font-bold">C</span>
+    <>
+      <NavigationSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      
+      <header className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="rounded-lg p-2 text-[var(--foreground)]/70 transition hover:bg-[var(--border)] hover:text-white"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]">
+            <span className="text-lg font-bold">C</span>
+          </div>
+          <h1 className="text-xl font-semibold text-white">StraitWatch</h1>
         </div>
-        <h1 className="text-xl font-semibold text-white">StraitWatch</h1>
-      </div>
 
       <div className="flex items-center gap-6">
         <div className="relative flex items-center gap-2">
@@ -184,5 +196,6 @@ export default function Header({
         </div>
       </div>
     </header>
+    </>
   );
 }

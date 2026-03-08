@@ -417,6 +417,7 @@ export function MapView({ selectedRegion, onHistoricalEventClick }: MapViewProps
         zoom={config.zoom}
         scrollWheelZoom={true}
         className="h-full w-full"
+        style={{ position: "relative", zIndex: 0 }}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
