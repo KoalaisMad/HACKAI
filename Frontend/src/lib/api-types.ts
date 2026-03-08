@@ -46,6 +46,7 @@ export interface EventItem {
   time: string;
   text: string;
   severity: "High" | "Med." | "Low";
+  predictedOilMove?: number;
 }
 
 export interface EventActivityPoint {

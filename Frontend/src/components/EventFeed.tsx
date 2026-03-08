@@ -59,15 +59,22 @@ export default function EventFeed() {
               </span>
               <span className="text-sm text-white">{event.text}</span>
             </div>
-            <span
-              className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
-                event.severity === "High"
-                  ? "bg-[var(--accent-red)]/20 text-[var(--accent-red)]"
-                  : "bg-[var(--accent-orange)]/20 text-[var(--accent-orange)]"
-              }`}
-            >
-              {event.severity}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span
+                className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
+                  event.severity === "High"
+                    ? "bg-[var(--accent-red)]/20 text-[var(--accent-red)]"
+                    : "bg-[var(--accent-orange)]/20 text-[var(--accent-orange)]"
+                }`}
+              >
+                {event.severity}
+              </span>
+              {event.predictedOilMove !== undefined && (
+                <span className={`text-[10px] font-semibold tracking-wider ${event.predictedOilMove > 0 ? "text-red-400" : event.predictedOilMove < 0 ? "text-green-400" : "text-gray-400"}`}>
+                  {event.predictedOilMove > 0 ? "+" : ""}{event.predictedOilMove.toFixed(2)}% OIL
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
