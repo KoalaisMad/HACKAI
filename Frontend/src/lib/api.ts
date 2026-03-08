@@ -11,6 +11,8 @@ import type {
   ShippingStatusResponse,
   RiskOilChartResponse,
   MapDataResponse,
+  PredictionSnapshot,
+  Bet,
   ApiError,
 } from "./api-types";
 
@@ -175,6 +177,44 @@ export const mapApi = {
   },
 };
 
+export const solanaApi = {
+  async createSnapshot(body: {
+    predictions: { day: number; predictedPrice: number; confidence: number; blockHash?: string; timestamp?: number }[];
+    blockHash: string;
+  }): Promise<PredictionSnapshot> {
+    return request<PredictionSnapshot>("/api/solana/snapshots", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async getSnapshots(limit?: number): Promise<{ snapshots: PredictionSnapshot[] }> {
+    const q = limit ? `?limit=${limit}` : "";
+    return request<{ snapshots: PredictionSnapshot[] }>(`/api/solana/snapshots${q}`);
+  },
+
+  async getSnapshot(id: string): Promise<PredictionSnapshot> {
+    return request<PredictionSnapshot>(`/api/solana/snapshots/${id}`);
+  },
+
+  async placeBet(body: {
+    snapshotId: string;
+    targetDay: number;
+    betSide: "YES" | "NO";
+    solAmount: number;
+    walletAddress?: string;
+  }): Promise<Bet> {
+    return request<Bet>("/api/solana/bets", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async getMyBets(): Promise<{ bets: Bet[] }> {
+    return request<{ bets: Bet[] }>("/api/solana/bets");
+  },
+};
+
 /** Single export for all backend endpoints. */
 export const api = {
   auth: authApi,
@@ -183,4 +223,5 @@ export const api = {
   shipping: shippingApi,
   charts: chartsApi,
   map: mapApi,
+  solana: solanaApi,
 };

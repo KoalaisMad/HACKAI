@@ -78,6 +78,12 @@ export default function CrisisBriefing({ selectedDataPoint, selectedHistoricalEv
   const [historicalYear, setHistoricalYear] = useState<number | null>(null);
 
   useEffect(() => {
+    console.log("briefing effect ran", {
+      selectedDataPoint,
+      selectedHistoricalEvent,
+      time: new Date().toISOString()
+    });
+
     if (selectedHistoricalEvent) {
       // Generate briefing from historical event with current economy adjustments
       console.log('CrisisBriefing received historical event:', selectedHistoricalEvent);
@@ -104,6 +110,11 @@ export default function CrisisBriefing({ selectedDataPoint, selectedHistoricalEv
     setIsHistoricalMode(false);
     setHistoricalYear(null);
     if (!isBackendConfigured()) return;
+    console.log("getCrisisBriefing called", {
+      selectedDataPoint,
+      selectedHistoricalEvent,
+      time: new Date().toISOString()
+    });
     crisisApi
       .getCrisisBriefing()
       .then(setBriefing)

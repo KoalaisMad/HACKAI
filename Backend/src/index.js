@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import {
   createUser,
   verifyUser,
@@ -87,6 +87,16 @@ app.get("/api/auth/session", (req, res) => {
   return res.json({ user });
 });
 
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+  const user = verifyToken(token);
+  if (!user) return res.status(401).json({ error: "Invalid or expired token" });
+  req.user = user;
+  next();
+}
+
 app.post("/api/chat", async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -104,7 +114,7 @@ app.post("/api/chat", async (req, res) => {
 
   try {
     const ai = new GoogleGenerativeAI(apiKey);
-    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const contents = messages.map((m) => m.content ?? "").join("\n\n");
     const fullPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${contents}`;
@@ -287,7 +297,7 @@ app.get("/api/crisis/briefing", async (req, res) => {
     if (apiKey) {
       try {
         const ai = new GoogleGenerativeAI(apiKey);
-        const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = ai.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
         const eventDetails = recentEvents.map((evt, idx) => 
           `${idx + 1}. ${evt.headline || evt.title} (Severity: ${evt.severityScore}, Predicted Oil Impact: ${(evt.modelPredictedOilMovePct || 0).toFixed(1)}%)`
@@ -309,7 +319,7 @@ Format your response EXACTLY as JSON:
   "topFactors": ["factor 1", "factor 2", "factor 3"]
 }`;
 
-        //const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
+        //const model = ai.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
@@ -494,6 +504,165 @@ app.get("/api/map/data", async (req, res) => {
   } catch (err) {
     console.error("Error fetching map data:", err);
     res.status(500).json({ error: "Failed to fetch map data", markers: [] });
+  }
+});
+
+// —— Solana Predictions & Betting ——
+
+app.post("/api/solana/snapshots", async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not connected");
+    const { predictions, blockHash } = req.body ?? {};
+    if (!Array.isArray(predictions) || predictions.length === 0 || !blockHash) {
+      return res.status(400).json({ error: "predictions array and blockHash required" });
+    }
+    const doc = {
+      predictions,
+      blockHash: String(blockHash),
+      createdAt: new Date(),
+    };
+    const result = await db.collection("prediction_snapshots").insertOne(doc);
+    res.status(201).json({
+      id: result.insertedId.toString(),
+      predictions: doc.predictions,
+      blockHash: doc.blockHash,
+      createdAt: doc.createdAt,
+    });
+  } catch (err) {
+    console.error("Create snapshot:", err);
+    res.status(500).json({ error: "Failed to create snapshot" });
+  }
+});
+
+app.get("/api/solana/snapshots", async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not connected");
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
+    const docs = await db
+      .collection("prediction_snapshots")
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+    res.json({
+      snapshots: docs.map((d) => ({
+        id: d._id.toString(),
+        predictions: d.predictions,
+        blockHash: d.blockHash,
+        createdAt: d.createdAt,
+      })),
+    });
+  } catch (err) {
+    console.error("List snapshots:", err);
+    res.status(500).json({ error: "Failed to list snapshots" });
+  }
+});
+
+app.get("/api/solana/snapshots/:id", async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not connected");
+    let id;
+    try {
+      id = new ObjectId(req.params.id);
+    } catch {
+      return res.status(400).json({ error: "Invalid snapshot id" });
+    }
+    const doc = await db.collection("prediction_snapshots").findOne({ _id: id });
+    if (!doc) return res.status(404).json({ error: "Snapshot not found" });
+    res.json({
+      id: doc._id.toString(),
+      predictions: doc.predictions,
+      blockHash: doc.blockHash,
+      createdAt: doc.createdAt,
+    });
+  } catch (err) {
+    console.error("Get snapshot:", err);
+    res.status(500).json({ error: "Failed to get snapshot" });
+  }
+});
+
+function generateMockTxSignature() {
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  let s = "";
+  for (let i = 0; i < 88; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+  return s;
+}
+
+app.post("/api/solana/bets", requireAuth, async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not connected");
+    const { snapshotId, targetDay, betSide, solAmount, walletAddress } = req.body ?? {};
+    if (!snapshotId || !targetDay || betSide == null || solAmount == null) {
+      return res.status(400).json({ error: "snapshotId, targetDay, betSide, solAmount required" });
+    }
+    if (!["YES", "NO"].includes(String(betSide).toUpperCase())) {
+      return res.status(400).json({ error: "betSide must be YES or NO" });
+    }
+    const day = parseInt(targetDay, 10);
+    if (day < 1 || day > 7) return res.status(400).json({ error: "targetDay must be 1–7" });
+    const amount = parseFloat(solAmount);
+    if (isNaN(amount) || amount <= 0 || amount > 1000) {
+      return res.status(400).json({ error: "solAmount must be between 0 and 1000" });
+    }
+    let oid;
+    try {
+      oid = new ObjectId(snapshotId);
+    } catch {
+      return res.status(400).json({ error: "Invalid snapshotId" });
+    }
+    const snapshot = await db.collection("prediction_snapshots").findOne({ _id: oid });
+    if (!snapshot) return res.status(404).json({ error: "Snapshot not found" });
+    const pred = snapshot.predictions.find((p) => p.day === day);
+    if (!pred) return res.status(400).json({ error: "targetDay not in snapshot" });
+    const txSig = walletAddress ? generateMockTxSignature() : generateMockTxSignature();
+    const bet = {
+      userId: req.user.email,
+      snapshotId: snapshotId,
+      targetDay: day,
+      betSide: String(betSide).toUpperCase(),
+      solAmount: amount,
+      walletAddress: walletAddress ? String(walletAddress) : null,
+      transactionSignature: txSig,
+      status: "confirmed",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await db.collection("bets").insertOne(bet);
+    res.status(201).json({
+      id: result.insertedId.toString(),
+      ...bet,
+    });
+  } catch (err) {
+    console.error("Place bet:", err);
+    res.status(500).json({ error: "Failed to place bet" });
+  }
+});
+
+app.get("/api/solana/bets", requireAuth, async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not connected");
+    const docs = await db
+      .collection("bets")
+      .find({ userId: req.user.email })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .toArray();
+    res.json({
+      bets: docs.map((d) => ({
+        id: d._id.toString(),
+        snapshotId: d.snapshotId,
+        targetDay: d.targetDay,
+        betSide: d.betSide,
+        solAmount: d.solAmount,
+        walletAddress: d.walletAddress,
+        transactionSignature: d.transactionSignature,
+        status: d.status,
+        createdAt: d.createdAt,
+      })),
+    });
+  } catch (err) {
+    console.error("List bets:", err);
+    res.status(500).json({ error: "Failed to list bets" });
   }
 });
 

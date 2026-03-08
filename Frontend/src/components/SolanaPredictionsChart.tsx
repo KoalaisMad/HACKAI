@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LineChart,
   Line,
@@ -13,18 +13,42 @@ import {
 } from "recharts";
 import { TrendingUp, RefreshCw, CheckCircle } from "lucide-react";
 import { generateSolanaPredictions, type SolanaPrediction } from "@/lib/solanaPredictions";
+import { solanaApi, isBackendConfigured } from "@/lib/api";
+import type { PredictionSnapshot } from "@/lib/api-types";
 
-export default function SolanaPredictionsChart() {
+interface SolanaPredictionsChartProps {
+  onSnapshotCreated?: (snapshot: PredictionSnapshot) => void;
+}
+
+export default function SolanaPredictionsChart({ onSnapshotCreated }: SolanaPredictionsChartProps) {
   const [chartData, setChartData] = useState<SolanaPrediction[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [blockchainStatus, setBlockchainStatus] = useState<"connected" | "disconnected">("connected");
 
-  const loadPredictions = () => {
+  const loadPredictions = useCallback(async () => {
     const predictions = generateSolanaPredictions();
     setChartData(predictions);
     setLastUpdate(new Date());
-  };
+    const blockHash = predictions[0]?.blockHash ?? "";
+    if (isBackendConfigured() && blockHash) {
+      try {
+        const snapshot = await solanaApi.createSnapshot({
+          predictions: predictions.map((p) => ({
+            day: p.day,
+            predictedPrice: p.predictedPrice,
+            confidence: p.confidence,
+            blockHash: p.blockHash,
+            timestamp: p.timestamp,
+          })),
+          blockHash,
+        });
+        onSnapshotCreated?.(snapshot);
+      } catch {
+        // Ignore snapshot creation errors (e.g. no backend)
+      }
+    }
+  }, [onSnapshotCreated]);
 
   useEffect(() => {
     loadPredictions();
@@ -35,7 +59,7 @@ export default function SolanaPredictionsChart() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [loadPredictions]);
 
   const handleRefresh = async () => {
     setIsUpdating(true);
@@ -43,7 +67,7 @@ export default function SolanaPredictionsChart() {
     // Simulate blockchain interaction
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    loadPredictions();
+    await loadPredictions();
     setIsUpdating(false);
   };
 
@@ -52,8 +76,9 @@ export default function SolanaPredictionsChart() {
   const avgConfidence = chartData.length > 0 
     ? chartData.reduce((sum, d) => sum + d.confidence, 0) / chartData.length 
     : 0;
-  const maxPrediction = Math.max(...chartData.map(d => d.predictedPrice));
-  const minPrediction = Math.min(...chartData.map(d => d.predictedPrice));
+  const prices = chartData.map(d => d.predictedPrice);
+  const maxPrediction = prices.length ? Math.max(...prices) : 80;
+  const minPrediction = prices.length ? Math.min(...prices) : 70;
 
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card-bg)]">

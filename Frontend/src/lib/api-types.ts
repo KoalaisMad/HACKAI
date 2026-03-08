@@ -127,6 +127,34 @@ export interface MapDataResponse {
   markers?: MapMarker[];
 }
 
+// —— Solana Predictions & Betting ——
+export interface SolanaPredictionItem {
+  day: number;
+  predictedPrice: number;
+  confidence: number;
+  blockHash?: string;
+  timestamp?: number;
+}
+
+export interface PredictionSnapshot {
+  id: string;
+  predictions: SolanaPredictionItem[];
+  blockHash: string;
+  createdAt: string;
+}
+
+export interface Bet {
+  id: string;
+  snapshotId: string;
+  targetDay: number;
+  betSide: "YES" | "NO";
+  solAmount: number;
+  walletAddress?: string | null;
+  transactionSignature: string;
+  status: string;
+  createdAt: string;
+}
+
 // —— Generic API error ——
 export interface ApiError {
   message: string;

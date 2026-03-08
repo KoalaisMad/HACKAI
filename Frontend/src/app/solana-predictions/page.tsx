@@ -3,12 +3,15 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import SolanaPredictionsChart from "@/components/SolanaPredictionsChart";
+import SolanaBettingPanel from "@/components/SolanaBettingPanel";
 import InvestmentComparison from "@/components/InvestmentComparison";
 import ChatBot from "@/components/ChatBot";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import type { PredictionSnapshot } from "@/lib/api-types";
 
 export default function SolanaPredictionsPage() {
   const [selectedRegion, setSelectedRegion] = useState("Strait of Hormuz");
+  const [currentSnapshot, setCurrentSnapshot] = useState<PredictionSnapshot | null>(null);
 
   return (
     <ProtectedRoute>
@@ -31,7 +34,11 @@ export default function SolanaPredictionsPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Main predictions chart */}
             <div className="lg:col-span-2">
-              <SolanaPredictionsChart />
+              <SolanaPredictionsChart onSnapshotCreated={setCurrentSnapshot} />
+            </div>
+            {/* Betting panel */}
+            <div>
+              <SolanaBettingPanel snapshot={currentSnapshot} />
             </div>
           </div>
 
